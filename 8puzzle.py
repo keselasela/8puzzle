@@ -1,6 +1,7 @@
 import random
 import copy
-
+import heapq
+import time
 random.seed(314) 
 
 state_x,state_y = 3,3
@@ -37,6 +38,13 @@ class Node:
                 if j==None:
                     self.empty_location_x = j_x
                     self.empty_location_y = i_y
+
+    def __lt__(self,other):
+        return True
+
+    def __gt__(self,other):
+        return True
+
     def show(self):
         for i in range(state_y):
             for j in range(state_x):
@@ -95,6 +103,11 @@ class Node:
     def sort_by_costs(nodes):
         nodes.sort(key=lambda x:(x.f_hat),reverse=True)
 
+    def where(self,node_list):
+        for ind,i in enumerate(node_list):
+            if self.is_equal(i):
+                return ind
+        return -1
     def is_in(self,node_list):
         for ind,i in enumerate(node_list):
             if self.is_equal(i):
@@ -109,6 +122,30 @@ class Node:
             raise ValueError("指定の要素が配列に存在するような実装になっていることを確認してください。")
         except ValueError as e:
             print(e)
+
+    def where_heap(self,node_list):
+        for ind,i in enumerate(node_list):
+            if self.is_equal(i[1]):
+                return ind
+        return -1
+
+
+
+    def is_in_heap(self,node_list):
+        for ind,i in enumerate(node_list):
+            if self.is_equal(i[1]):
+                return True
+        return False
+    def node_index_heap(self,node_list):
+        for ind,i in enumerate(node_list):
+            if self.is_equal(i[1]):
+                return ind
+        
+        try:
+            raise ValueError("指定の要素が配列に存在するような実装になっていることを確認してください。")
+        except ValueError as e:
+            print(e)
+
     
 
 
@@ -127,44 +164,57 @@ def main():
 
 
     goal_node = Node(goal_state)
-    parent = Node(puzzles[30])
+    parent = Node(puzzles[99])
 
 
     print("------問題------")
     parent.show()
 
-
-
     open_list = []
     closed_list = []
 
-    open_list.append(parent)
+    heapq.heappush(open_list, (parent.f_hat,parent))
+
+
+    start = time.time()
+
+    fase1 = 0
+    fase2 = 0
+    fase3 = 0
+    fase4 = 0
+    fase5 = 0
 
     while open_list:
-        head = open_list.pop()
+        start = time.time()
+        _,head = heapq.heappop(open_list)
 
         if head.is_equal(goal_node):
             answer = head
             break
 
         children = head.generate_children()
-        print()
-        for i in children:
-            if not(i.is_in(open_list)) and not(i.is_in(closed_list)):
-                open_list.append(i)
-            elif i.is_in(open_list):
-                ind = i.node_index(open_list)
-                if open_list[ind].f_hat > i.f_hat:
-                    open_list.pop(ind)
-                    open_list.append(i)
-            elif i.is_in(closed_list):
-                ind = i.node_index(closed_list)
-                if closed_list[ind].f_hat > i.f_hat:
-                    closed_list.pop(ind)
-                    open_list.append(i)
 
-        Node.sort_by_costs(open_list)
-        print(head.f_hat)
+
+
+        for i in children:
+
+            if not(i.is_in_heap(open_list)) and not(i.is_in(closed_list)):
+                fase1_start = time.time()
+
+                heapq.heappush(open_list, (i.f_hat,i))
+
+                fase1 = time.time() + fase1_start
+                
+            elif not(ind:=i.where_heap(open_list)==-1) and open_list[ind][1].f_hat > i.f_hat:
+                open_list.pop(ind)
+                heapq.heapify(open_list)
+                heapq.heappush(open_list, (i.f_hat,i))
+            elif not(ind:=i.where(closed_list)==-1) and closed_list[ind].f_hat > i.f_hat:
+                closed_list.pop(ind)
+                heapq.heappush(open_list, (i.f_hat,i))
+
+        
+
         closed_list.append(head)
     
     print("¥n------探索完了-------")
@@ -172,6 +222,8 @@ def main():
         i.show()
     
     print()
+
+    print(fase1/(fase1+fase2))
 
 
 
@@ -205,8 +257,6 @@ def generate_random_puzzle(move_count):
         puzzle[new_row][new_col] = None
 
     return puzzle
-
-
 
 
 if __name__=="__main__":
