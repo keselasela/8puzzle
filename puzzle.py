@@ -15,7 +15,7 @@ goal_state = [
 
 
 class Node:
-    routes = []
+    parent = None
     state = None
     empty_location_x = None
     empty_location_y = None
@@ -24,14 +24,14 @@ class Node:
 
     def __init__(self,state,parent=None):
 
-        if parent:
-
-            self.routes = parent.routes + [self]
-        else:
-            self.routes = [self]
+        self.parent = parent
         self.state = state
         self.h_hat = self.get_h_hat()
-        self.g_hat = len(self.routes)-1
+        if parent:
+
+            self.g_hat = parent.g_hat+1
+        else:
+            self.g_hat = 0
         self.f_hat = self.h_hat + self.g_hat
 
         for i_y,i in enumerate(state):
@@ -102,9 +102,6 @@ class Node:
 
     def is_equal(self,target):
         return self.state == target.state
-    
-    def sort_by_costs(nodes):
-        nodes.sort(key=lambda x:(x.f_hat),reverse=True)
 
     def where(self,node_list):
         for ind,i in enumerate(node_list):
@@ -112,7 +109,7 @@ class Node:
                 return ind
         return -1
     def is_in(self,node_list):
-        for ind,i in enumerate(node_list):
+        for i in node_list:
             if self.is_equal(i):
                 return True
         return False
@@ -133,7 +130,7 @@ class Node:
 
 
     def is_in_heap(self,node_list):
-        for ind,i in enumerate(node_list):
+        for i in node_list:
             if self.is_equal(i[1]):
                 return True
         return False
@@ -162,14 +159,6 @@ def a_star(puzzle):
     heapq.heappush(open_list, (parent.f_hat,parent))
 
 
-    start = time.time()
-
-    fase1 = 0
-    fase2 = 0
-    fase3 = 0
-    fase4 = 0
-    fase5 = 0
-
     while open_list:
         
         _,head = heapq.heappop(open_list)
@@ -185,33 +174,24 @@ def a_star(puzzle):
         for i in children:
 
             if not(i.is_in_heap(open_list)) and not(i.is_in(closed_list)):
-                fase1_start = time.time()
 
                 heapq.heappush(open_list, (i.f_hat,i))
-
-                fase1 = time.time() - fase1_start + fase1
                 
             elif i.is_in_heap(open_list):
                 ind = i.node_index_heap(open_list)
                 if open_list[ind][1].f_hat > i.f_hat:
 
-                    fase2_start = time.time()
-
                     open_list.pop(ind)
                     heapq.heapify(open_list)
                     heapq.heappush(open_list, (i.f_hat,i))
-
-                    fase2 = time.time() - fase2_start + fase2
                 
             elif i.is_in(closed_list):
                 ind = i.node_index(closed_list)
                 if closed_list[ind].f_hat > i.f_hat:
             
-                    fase3_start = time.time()
+                    # closed_list.pop(ind)
+                    # heapq.heappush(open_list, (i.f_hat,i))
 
-                    closed_list.pop(ind)
-                    heapq.heappush(open_list, (i.f_hat,i))
-                    fase3 = time.time() - fase3_start + fase3
 
                     raise ValueError("ヒューリスティック関数に矛盾性があるかもしれません")
 
@@ -220,21 +200,11 @@ def a_star(puzzle):
         closed_list.append(head)
     
     print("------探索完了-------")
-    # for i in answer.routes:
-    #     i.show()
-        # print("-------------")
-        # print("score:"+str(i.f_hat))
-        # print("-------------")
+
     print("経路コスト：" + str(answer.g_hat))
     
     print()
 
-    total_time = time.time() - start
-
-    # print(":")
-    # print(fase1/total_time*100)
-    # print(fase2/total_time*100)
-    # print(fase3/total_time*100)
 
     return answer
 
