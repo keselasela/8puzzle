@@ -2,13 +2,14 @@ import random
 import copy
 import heapq
 import time
+
 random.seed(314) 
 
 state_x,state_y = 3,3
 goal_state = [
-    [1, 2, 3], 
-    [4, 5, 6], 
-    [7, 8, None]
+    [None,1, 2], 
+    [3, 4, 5], 
+    [6, 7, 8]
     ]
 
 
@@ -30,7 +31,7 @@ class Node:
             self.routes = [self]
         self.state = state
         self.h_hat = self.get_h_hat()
-        self.g_hat = len(self.routes)
+        self.g_hat = len(self.routes)-1
         self.f_hat = self.h_hat + self.g_hat
 
         for i_y,i in enumerate(state):
@@ -51,22 +52,24 @@ class Node:
                 print(self.state[i][j], end=' ')
             print()
         print()
+    def show_score(self):
+        print("--------------")
+        print("g_hat:" + str(self.g_hat))
+        print("h_hat:" + str(self.h_hat))
+        print("f_hat:" + str(self.f_hat))
         
     def get_h_hat(self):
+
+        manhattan_distance = 0
+        for y,row in enumerate(self.state):
+            for x, item in enumerate(row):
+                for g_y,g_row in enumerate(goal_state):
+                    for g_x, g_item in enumerate(g_row):
+                        if not(item is None )and item==g_item :
+                            manhattan_distance = abs(x-g_x) + abs(y-g_y) + manhattan_distance
+                            
         
-        g_x,g_y = None,None
-        for y,i in enumerate(goal_state):
-            for x, j in enumerate(i):
-                if not j :
-                    g_x,g_y = x,y
-        
-        t_x,t_y = None,None
-        for y,i in enumerate(self.state):
-            for x, j in enumerate(i):
-                if not j :
-                    t_x,t_y = x,y  
-        
-        return abs(g_x-t_x) + abs(g_y-t_y)
+        return manhattan_distance
 
 
     def generate_children(self):
@@ -118,10 +121,8 @@ class Node:
             if self.is_equal(i):
                 return ind
         
-        try:
-            raise ValueError("指定の要素が配列に存在するような実装になっていることを確認してください。")
-        except ValueError as e:
-            print(e)
+        raise ValueError("指定の要素が配列に存在するような実装になっていることを確認してください。")
+
 
     def where_heap(self,node_list):
         for ind,i in enumerate(node_list):
@@ -141,30 +142,15 @@ class Node:
             if self.is_equal(i[1]):
                 return ind
         
-        try:
-            raise ValueError("指定の要素が配列に存在するような実装になっていることを確認してください。")
-        except ValueError as e:
-            print(e)
-
-    
+        raise ValueError("指定の要素が配列に存在するような実装になっていることを確認してください。")
 
 
     
 
 
-def main():
-
-    answer = None
-
-    # 100個の初期状態を生成
-    puzzles = [generate_random_puzzle(move_count) for move_count in range(1, 101)]
-
-
-
-
-
+def a_star(puzzle):
     goal_node = Node(goal_state)
-    parent = Node(puzzles[99])
+    parent = Node(puzzle)
 
 
     print("------問題------")
@@ -185,7 +171,7 @@ def main():
     fase5 = 0
 
     while open_list:
-        start = time.time()
+        
         _,head = heapq.heappop(open_list)
 
         if head.is_equal(goal_node):
@@ -203,27 +189,72 @@ def main():
 
                 heapq.heappush(open_list, (i.f_hat,i))
 
-                fase1 = time.time() + fase1_start
+                fase1 = time.time() - fase1_start + fase1
                 
-            elif not(ind:=i.where_heap(open_list)==-1) and open_list[ind][1].f_hat > i.f_hat:
-                open_list.pop(ind)
-                heapq.heapify(open_list)
-                heapq.heappush(open_list, (i.f_hat,i))
-            elif not(ind:=i.where(closed_list)==-1) and closed_list[ind].f_hat > i.f_hat:
-                closed_list.pop(ind)
-                heapq.heappush(open_list, (i.f_hat,i))
+            elif i.is_in_heap(open_list):
+                ind = i.node_index_heap(open_list)
+                if open_list[ind][1].f_hat > i.f_hat:
+
+                    fase2_start = time.time()
+
+                    open_list.pop(ind)
+                    heapq.heapify(open_list)
+                    heapq.heappush(open_list, (i.f_hat,i))
+
+                    fase2 = time.time() - fase2_start + fase2
+                
+            elif i.is_in(closed_list):
+                ind = i.node_index(closed_list)
+                if closed_list[ind].f_hat > i.f_hat:
+            
+                    fase3_start = time.time()
+
+                    closed_list.pop(ind)
+                    heapq.heappush(open_list, (i.f_hat,i))
+                    fase3 = time.time() - fase3_start + fase3
+
+                    raise ValueError("ヒューリスティック関数に矛盾性があるかもしれません")
 
         
 
         closed_list.append(head)
     
-    print("¥n------探索完了-------")
-    for i in answer.routes:
-        i.show()
+    print("------探索完了-------")
+    # for i in answer.routes:
+    #     i.show()
+        # print("-------------")
+        # print("score:"+str(i.f_hat))
+        # print("-------------")
+    print("経路コスト：" + str(answer.g_hat))
     
     print()
 
-    print(fase1/(fase1+fase2))
+    total_time = time.time() - start
+
+    # print(":")
+    # print(fase1/total_time*100)
+    # print(fase2/total_time*100)
+    # print(fase3/total_time*100)
+
+    return answer
+
+
+def main():
+
+    answer = None
+
+    # 100個の初期状態を生成
+    puzzles = [generate_random_puzzle(move_count) for move_count in range(1, 101)]
+
+
+
+    for ind,puzzle in enumerate(puzzles):
+        
+        print("-----何問目：" + str(ind) + "-----")
+        a_star(puzzle)
+
+
+
 
 
 
